@@ -16,15 +16,15 @@ If there was a way to force Screen('Flip') to do a busy-wait-loop instead of sle
 
 Here is my situation:
 
-PsychtoolboxVersion = 3.0.12 - Flavor: beta - Corresponds to SVN Revision 5727.
-I am using a recent iMac (OSX 10.9.5, 3.5GHz i7, 16 GB ram, NVIDIA GTX 780M 4MB vram.
-Kernel Driver installed.
+	PsychtoolboxVersion = 3.0.12 - Flavor: beta - Corresponds to SVN Revision 5727.
+	iMac "Late 2013" (OSX 10.9.5, 3.5GHz i7, 16 GB ram, NVIDIA GTX 780M 4MB vram.
+	Kernel Driver installed.
 
 # First, the good news, the part that works:
 
 I get very accurate "beam positions" using this command:
 
-        beampos = Screen('GetWindowInfo', w, 1);
+    beampos = Screen('GetWindowInfo', w, 1);
 
 I also get extremely precise "VBL timestamps" using this command:
 
@@ -75,8 +75,14 @@ Successful Flips are shown in green; missed Flips are shown in red.
 Set "ShowBug" to false to see good behvaiour, without missed Flips.
 Set "ShowBug" to true to see bad behaviour, with missed Flips.
 
-Type "escape" to finish the program and see beam position and timing data shown in 3 Matlab figures.
+The program will keep going until it has sampled 80% of all possible beam positions.
 
-I could show the Matlab plots for 2 different iMacs, if it would help.
- 
+Type "escape" to finish the program early.
+
+The beam position and timing data are plotted in 3 Matlab figures.
+
+
+# Evidence
+
+I have included PDFs showing Matlab plots that illustrate this Flip timing bug.
 
