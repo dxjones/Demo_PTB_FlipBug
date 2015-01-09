@@ -26,7 +26,11 @@ end
 try
 
 Priority(9);
-w = Screen('OpenWindow', 0);
+
+% select s = 1 to test external display
+s = 0;
+
+w = Screen('OpenWindow', s);
 
 FlipInterval = Screen('GetFlipInterval', w);
 winfo = Screen('GetWindowInfo', w);
@@ -34,7 +38,7 @@ vblank = winfo.VBLStartline;
 vtotal = winfo.VBLEndline;
 
 % - - - - -
-r = Screen('Rect', 0);
+r = Screen('Rect', s);
 ScreenHeight = RectHeight(r);
 ScreenWidth = RectWidth(r);
 cx = ScreenWidth/2;
