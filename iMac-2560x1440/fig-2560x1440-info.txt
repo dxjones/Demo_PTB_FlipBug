@@ -1,0 +1,13 @@
+Hardware:
+
+iMac "Late 2013", OSX 10.9.5
+3.5 GHz i5, 16 GB ram, NVIDIA GT 780M 4 GB vram
+PsychtoolboxVersion 3.0.12 - Flavor: beta - Corresponds to SVN Revision 5727
+screen resolution = 2560 x 1440
+
+For this iMac, Screen('Flip') seem reliable when wait an extra XXX FlipIntervals.
+
+When wait for XXX FlipIntervals, Screen('Flip') becomes increasingly unreliable.
+
+This systematic connection with time suggests
+there is an error in the logic of Screen('Flip').

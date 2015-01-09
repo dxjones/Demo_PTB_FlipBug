@@ -2,13 +2,26 @@
 %
 % 2015-01-08 dxjones@gmail.com
 %
+%
+% "delay" parameter controls number of extra FlipIntervals
+% to wait before next Screen('Flip') command
+%
+% in my experience, when delay == 0, we avoid missed Flips
+%
+% depending on which iMac I test, different delay values
+% reliably cause missed Flips.
+%
+% examples:
+% iMac with resolution 2560x1440 missed flips with delay == 2
+% iMac with resolution 1920x1080 missed flips with delay == 4
 
-% set ShowBug to false to avoid missed Flips
-% set ShowBug to true to demonstrate missed Flips
+function Demo_FlipBug(delay)
 
-function Demo_FlipBug
-
-ShowBug = true;
+if nargin < 1
+    delay = 0;
+elseif delay > 30
+    delay = 30;
+end
 
 try
 
@@ -70,11 +83,10 @@ while true
     Screen('DrawLine', w, 0, 100,y, 400,y);
  
     % wait a random delay
-    delay = rand * FlipInterval;
-    WaitSecs(delay);
+    WaitSecs(rand * FlipInterval);
     
-    if ShowBug
-        WaitSecs(2*FlipInterval);
+    if delay > 0
+        WaitSecs(delay*FlipInterval);
     end
     
     % wait for a beampos we haven't seen before
@@ -180,7 +192,7 @@ plot(vtotal*[0 1],[0 0],'k:', ...
 
 xlabel('Beampos before Flip');
 ylabel('Beampos after Flip');
-title('Beam position before and after Flip');
+title(sprintf('Beam position before and after Flip, delay = %d', delay));
 text(vtotal/2, vblank, 'VBLANK');
 text(vtotal/2, vtotal, 'VTOTAL');
 axis([0 vtotal vblank-20 vtotal+20]);
@@ -207,7 +219,7 @@ plot(vtotal*[0 1],[0 0],'k:', ...
 axis([0 vtotal -0.2 0.2]);
 xlabel('Beampos before Flip');
 ylabel('Flip Time Prediction Error (msec)');
-title('Flip Time Prediction Error vs Beam Position');
+title(sprintf('Flip Time Prediction Error vs Beam Position, delay = %d', delay));
 
 %%
 % Figure 3 highlights missed Flips
@@ -225,6 +237,11 @@ plot(vtotal*[0 1],[0 0],'k:', ...
 axis([0 vtotal 1000*FlipInterval-0.2 1000*FlipInterval+0.2]);
 xlabel('Beampos before Flip');
 ylabel('Flip Time Prediction Error (msec)');
-title('Flip Time Prediction vs Beam Position ... (Missed Flips)');
+title(sprintf('Flip Time Prediction vs Beam Position ... (Missed Flips), delay = %d', delay));
+
+set(1, 'PaperPosition', [0.25 0.25 8 10.5]);
+filename = sprintf('fig-%d.pdf', delay);
+print(filename, '-dpdf');
+
 end
 
