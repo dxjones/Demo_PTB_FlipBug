@@ -1,6 +1,6 @@
 % Demo_FlipBug.m
 %
-% 2015-01-08 dxjones@gmail.com
+% 2015-01-15 dxjones@gmail.com
 %
 %
 % "delay" parameter controls number of extra FlipIntervals
@@ -15,12 +15,16 @@
 % iMac with resolution 2560x1440 missed flips with delay == 2
 % iMac with resolution 1920x1080 missed flips with delay == 4
 
-function Demo_FlipBug(delay)
+function Demo_FlipBug(delay, finish)
 
 if nargin < 1
     delay = 0;
 elseif delay > 30
     delay = 30;
+end
+
+if nargin < 2
+    finish = 0;
 end
 
 try
@@ -85,10 +89,15 @@ while true
     % simple animation shows progress through loop
     y = nnz(beam);
     Screen('DrawLine', w, 0, 100,y, 400,y);
+    
+    if finish
+        Screen('DrawingFinished', w, 1);
+    end
  
     % wait a random delay
     WaitSecs(rand * FlipInterval);
     
+    % possibly wait several frames
     if delay > 0
         WaitSecs(delay*FlipInterval);
     end
@@ -109,11 +118,11 @@ while true
     % Flip
     
     when = 0;
-%     when = GetSecs + 0.010;
-    [VBL_timestamp Stim_timestamp Flip_timestamp Missed Beampos_after_Flip ] = Screen('Flip', w, when,1);
+
+    [VBL_timestamp Stim_timestamp Flip_timestamp Missed Beampos_after_Flip ] = Screen('Flip', w, when, 1);
     
     % Calculate Flip Time
-    % (normally, this would be done before the Flip)
+    % (normally, this calculation would be done before the Flip)
     
     t_pre(b) = t0;
     t_post(b) = t1;
@@ -168,9 +177,6 @@ end
 scanline = 0:vtotal;
 
 scanlines_per_msec = (vtotal+1) / (1000 * FlipInterval);
-
-% guess at beampos deadline for successful flips
-% vdeadline = 0.75 * vblank;
 
 
 %%
