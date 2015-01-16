@@ -142,6 +142,8 @@ FlickerHeight = 0.075 * ScreenWidth;
 FlickerRectLeft = SetRect(0.050*ScreenWidth, cy, 0.125*ScreenWidth, cy + FlickerHeight);
 FlickerRectRight = SetRect(0.125*ScreenWidth, cy, 0.200*ScreenWidth, cy + FlickerHeight);
 
+five_hertz = true;
+
 VBL_timestamp = 0;
 while true
     if nnz(beam) >= beamcount
@@ -161,18 +163,25 @@ while true
     Screen('FillRect', w, flicker, FlickerRectLeft);
     flicker = 255 - flicker;
     Screen('FillRect', w, flicker, FlickerRectRight);
-
-    
+   
     if finish
         Screen('DrawingFinished', w, 1);
     end
  
-    % wait a random delay
-    WaitSecs(rand * FlipInterval);
-    
-    % possibly wait several frames
-    if delay > 0
-        WaitSecs(delay*FlipInterval);
+    if five_hertz
+        if VBL_timestamp ~= 0
+            when = VBL_timestamp + (1 - 0.5) * FlipInterval;
+            now = GetSecs;
+            WaitSecs(when - now);
+        end
+    else
+        % wait a random delay
+        WaitSecs(rand * FlipInterval);
+
+        % possibly wait several frames
+        if delay > 0
+            WaitSecs(delay*FlipInterval);
+        end
     end
     
     % wait for a beampos we haven't seen before
@@ -185,7 +194,9 @@ while true
             beam(b) = true;
             break
         end
-%         break
+        if five_hertz
+            break
+        end
     end
     
     % Flip
@@ -216,7 +227,6 @@ while true
     
     % - - - - -
     px = x0 + (x1-x0) * (b/vtotal);
-%     py = y1 - (y1-y0) * ((Beampos_after_Flip - vblank) / (1.5*(vtotal - vblank)));
     py = y1 - (y1-y0) * (Beampos_after_Flip / vtotal);
 
     Screen('DrawLine', w, 128, x0,y0, x0,y1);
