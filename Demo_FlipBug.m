@@ -54,8 +54,8 @@ x0 = (ScreenWidth/2) - (vtotal/2);
 x1 = x0 + vtotal;
 x_vblank = x0 + (x1-x0) * (vblank/vtotal);
 y0 = 0.10 * ScreenHeight;
-y1 = y0 + 0.80 * ScreenHeight;
-y_vblank = y1 - (y1-y0) * (1/1.5);
+y1 = 0.90 * ScreenHeight;
+y_vblank = y1 - (y1-y0) * (vblank/vtotal);
 % - - - - -
 
 N = 1 + vtotal;
@@ -88,7 +88,7 @@ while true
     
     % simple animation shows progress through loop
     y = nnz(beam);
-    Screen('DrawLine', w, 0, 100,y, 400,y);
+    Screen('DrawLine', w, 0, 100,y, 300,y);
     
     if finish
         Screen('DrawingFinished', w, 1);
@@ -141,7 +141,7 @@ while true
     
     % - - - - -
     px = x0 + (x1-x0) * (b/vtotal);
-    py = y1 - (y1-y0) * ((Beampos_after_Flip - vblank) / (1.5*(vtotal - vblank)));
+    py = y1 - (y1-y0) * (Beampos_after_Flip / vtotal);
 
     Screen('DrawLine', w, 128, x0,y0, x0,y1);
     Screen('DrawLine', w, 128, x1,y0, x1,y1);
@@ -187,8 +187,8 @@ scanlines_per_msec = (vtotal+1) / (1000 * FlipInterval);
 %
 
 % adjust returned beampos to wrap around past the end of vtotal
-X = bp < (vtotal/2);
-bp( X ) = bp( X ) + (1+vtotal);
+% X = bp < (vtotal/2);
+% bp( X ) = bp( X ) + (1+vtotal);
 
 figure(1);
 subplot(3,1,1);
