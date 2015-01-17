@@ -15,10 +15,10 @@
 % iMac with resolution 2560x1440 missed flips with delay == 2
 % iMac with resolution 1920x1080 missed flips with delay == 4
 
-function DisplayTiming(delay, finish)
+function delta = DisplayTiming(delay, finish)
 
 if nargin < 1
-    delay = 0;
+    delay = 2;
 elseif delay > 30
     delay = 30;
 end
@@ -26,6 +26,7 @@ end
 if nargin < 2
     finish = 0;
 end
+finish = 1;
 
 try
 
@@ -39,6 +40,7 @@ Screen('Preference', 'SkipSyncTests', 1);
 w = Screen('OpenWindow', s);
 
 FlipInterval = Screen('GetFlipInterval', w);
+FlipInterval = 0.01667;
 winfo = Screen('GetWindowInfo', w);
 vblank = winfo.VBLStartline;
 vtotal = winfo.VBLEndline;
@@ -52,52 +54,55 @@ fprintf('Screen Resolution = %d x %d\n', ScreenWidth, ScreenHeight);
 fprintf('vblank = %d\n', vblank);
 fprintf('vtotal = %d\n', vtotal);
 
+if vtotal < vblank
+    vtotal = ceil(1.125 * vblank);
+end
+
 %%
-Screen('TextFont', w, 'Tahoma');
-FontSize = 20;
+Screen('TextFont', w, 'Menlo');
+FontSize = 18;
 Screen('TextSize', w, FontSize);
 Screen('TextStyle', w, 1);
-
-Screen('DrawText', w, 'Display Timing', 0.05*ScreenWidth, 2*FontSize, 0);
-
+Screen('DrawText', w, 'Display Timing', 0.02*ScreenWidth, 2*FontSize, 0);
 Screen('TextStyle', w, 0);
 
-textbox = SetRect(0.05*ScreenWidth, 0.1*ScreenHeight, 0.2*ScreenWidth, 0.5*ScreenHeight);
-Screen('FrameRect', w, 0, textbox);
 menu = { ...
-    'Delay:'; ...
-    '0 - 0 frames\n'; ...
+    '    Delay:'; ...
+    '0 - 0 frames'; ...
     '1 - 1 frame'; ...
     '2 - 2 frames'; ...
     '3 - 3 frames'; ...
     '4 - 4 frames'; ...
-    'Flicker:'; ...
-    '5 - 5 Hz'; ...
+    ' '; ...
+    '    Flicker:'; ...
+    '5 -  5 Hz'; ...
     '6 - 10 Hz'; ...
     '7 - 15 Hz'; ...
     '8 - 30 Hz'; ...
-    '9 - Idle'; ...
+    '9 - Max'; ...
+    ' '; ...
     'Esc - return to Main Menu'
     };
 Nrows = size(menu, 1);
 ty = 0.1*ScreenHeight;
 for i = 1:Nrows
-    Screen('DrawText', w, menu{i}, 0.05 * ScreenWidth, ty, 0);
+    Screen('DrawText', w, menu{i}, 0.02 * ScreenWidth, ty, 0);
     ty = ty + 1.5*FontSize;
 end
 
 info = { ...
-    sprintf('resolution = %d x %d', ScreenWidth, ScreenHeight); ...
+    sprintf('width  = %d', ScreenWidth); ...
+    sprintf('height = %d', ScreenHeight); ...
     sprintf('vblank = %d', vblank); ...
     sprintf('vtotal = %d', vtotal); ...
-    sprintf('fps = %.6f Hz', FrameRate); ...
-    sprintf('interval = %.6f msec', FlipInterval*1000); ...
-    sprintf('std = %.6f msec',0.0); ...
+    sprintf('frame rate = %9.6f Hz', FrameRate); ...
+    sprintf('interval   = %9.6f ms', FlipInterval*1000); ...
+    sprintf('std dev    = %9.6f ms', 0.0); ...
     };
 Nrows = size(info, 1);
-ty = 0.9*ScreenHeight - Nrows * 1.5 * FontSize
+ty = 0.9*ScreenHeight - Nrows * 1.5 * FontSize;
 for i = 1:Nrows
-    Screen('DrawText', w, info{i}, 0.05 * ScreenWidth, ty, 0);
+    Screen('DrawText', w, info{i}, 0.02 * ScreenWidth, ty, 0);
     ty = ty + 1.5*FontSize;
 end
 
@@ -115,7 +120,19 @@ x1 = 0.95 * ScreenWidth;
 x_vblank = x0 + (x1-x0) * (vblank/vtotal);
 y0 = 0.10 * ScreenHeight;
 y1 = 0.90 * ScreenHeight;
-y_vblank = y1 - (y1-y0) * (1/1.5);
+y_vblank = y1 - (y1-y0) * (vblank/vtotal);
+% - - - - -
+
+    r = SetRect(x0, y0, x1, y1);
+    Screen('FillRect', w, 255-16, r);
+    Screen('FrameRect', w, 128, r);
+%     Screen('DrawLine', w, 128, x0,y0, x0,y1);
+%     Screen('DrawLine', w, 128, x1,y0, x1,y1);
+%     Screen('DrawLine', w, 128, x0,y0, x1,y0);
+%     Screen('DrawLine', w, 128, x0,y1, x1,y1);
+    Screen('DrawLine', w, 128, x_vblank,y0, x_vblank,y1);
+    Screen('DrawLine', w, 128, x0,y_vblank, x1,y_vblank);
+
 % - - - - -
 
 N = 1 + vtotal;
@@ -138,15 +155,27 @@ vt_mid = zeros(N,1);
 beamcount = 0.75 * vtotal;
 
 flicker = 0;
-FlickerHeight = 0.075 * ScreenWidth;
-FlickerRectLeft = SetRect(0.050*ScreenWidth, cy, 0.125*ScreenWidth, cy + FlickerHeight);
-FlickerRectRight = SetRect(0.125*ScreenWidth, cy, 0.200*ScreenWidth, cy + FlickerHeight);
+FlickerHeight = 0.09 * ScreenWidth;
+FlickerRectLeft = SetRect(0.02*ScreenWidth, cy, 0.11*ScreenWidth, cy + FlickerHeight);
+FlickerRectRight = SetRect(0.11*ScreenWidth, cy, 0.20*ScreenWidth-1, cy + FlickerHeight);
 
-five_hertz = true;
+five_hertz = false;
+Duration = 15;          % Flicker for 10 seconds
+NominalFrameRate = 60;  % roughly 60 Hz
+FlickerFrequency = 15;
+FrameCount= round(NominalFrameRate / (2*FlickerFrequency));
+FlipTotal = (Duration * NominalFrameRate) / FrameCount;
+
+delta = zeros(FlipTotal,1);
 
 VBL_timestamp = 0;
+FlipCount = 0;
+tstart = GetSecs;
 while true
     if nnz(beam) >= beamcount
+        break
+    end
+    if five_hertz && FlipCount > FlipTotal
         break
     end
     if KbCheck
@@ -154,11 +183,12 @@ while true
     end
     
     % simple animation shows progress through loop
-    y = nnz(beam) / beamcount;
-    ProgressRect = SetRect(0.2 * ScreenWidth, 48, (0.2 + (y * 0.7)) * ScreenWidth, 96);
-    Screen('FillRect', w, 0, ProgressRect);
-    
-%     Screen('DrawLine', w, 0, 24,y, 72,y);
+    if five_hertz
+        p = FlipCount / FlipTotal;
+    else
+        p = nnz(beam) / beamcount;
+    end
+    ProgressBar(p, w, ScreenWidth, ScreenHeight);
     
     Screen('FillRect', w, flicker, FlickerRectLeft);
     flicker = 255 - flicker;
@@ -170,7 +200,7 @@ while true
  
     if five_hertz
         if VBL_timestamp ~= 0
-            when = VBL_timestamp + (1 - 0.5) * FlipInterval;
+            when = VBL_timestamp + (FrameCount - 0.75) * FlipInterval;
             now = GetSecs;
             WaitSecs(when - now);
         end
@@ -203,7 +233,12 @@ while true
     
     when = 0;
 
+    VBL_prev = VBL_timestamp;
     [VBL_timestamp Stim_timestamp Flip_timestamp Missed Beampos_after_Flip ] = Screen('Flip', w, when, 1);
+    if FlipCount > 0
+        delta(FlipCount) = VBL_timestamp - VBL_prev;
+    end
+    FlipCount = FlipCount + 1;
     
     % Calculate Flip Time
     % (normally, this calculation would be done before the Flip)
@@ -223,31 +258,31 @@ while true
     m(b) = Missed;
     bp(b) = Beampos_after_Flip;
     
-    fprintf('Beampos_after_Flip = %d\n', Beampos_after_Flip);
+%     fprintf('Beampos_after_Flip = %d\n', Beampos_after_Flip);
     
     % - - - - -
     px = x0 + (x1-x0) * (b/vtotal);
     py = y1 - (y1-y0) * (Beampos_after_Flip / vtotal);
 
-    Screen('DrawLine', w, 128, x0,y0, x0,y1);
-    Screen('DrawLine', w, 128, x1,y0, x1,y1);
-    Screen('DrawLine', w, 128, x0,y0, x1,y0);
-    Screen('DrawLine', w, 128, x0,y1, x1,y1);
-    Screen('DrawLine', w, 128, x_vblank,y0, x_vblank,y1);
-    Screen('DrawLine', w, 128, x0,y_vblank, x1,y_vblank);
 
     if FlipDelta < (FlipInterval/2)
         color = [0 255 0 255];
+        Screen('FillRect', w, color, [px 0.95*ScreenHeight px+1 0.98*ScreenHeight]);
     else
         color = [255 0 0 255];
-        Screen('FillRect', w, color, [px-1 y1+10 px+1 y1+110]);
+        Screen('FillRect', w, color, [px 0.92*ScreenHeight px+1 0.95*ScreenHeight]);
     end
-    Screen('FillRect', w, color, [px-1 py-3 px+1 py+3]);
+    Screen('FillRect', w, color, [px-2 py-3 px+2 py+3]);
     
-    fprintf('[ %4d %4d %4d %4d ]\n', px-1, py-3, px+1, py+3);
+%     fprintf('[ %4d %4d %4d %4d ]\n', px-2, py-3, px+2, py+3);
     
     % - - - - -
 end
+tstop = GetSecs;
+
+elapsed = tstop - tstart
+fps = FlipCount / elapsed
+interval = 1000 / fps
 
 % hocus-pocus to make sure we close all windows
 wlist = Screen('Windows');
@@ -315,7 +350,7 @@ plot(vtotal*[0 1],[0 0],'k:', ...
     scanline(beam),1000*delta_pre(beam),'g.', ...
     scanline(beam),1000*delta_mid(beam),'b.', ...
     scanline(beam),1000*delta_post(beam),'r.');
-axis([0 vtotal -0.2 0.2]);
+axis([0 vtotal -0.5 0.5]);
 xlabel('Beampos before Flip');
 ylabel('Flip Time Prediction Error (msec)');
 title(sprintf('Flip Time Prediction Error vs Beam Position, delay = %d', delay));
@@ -333,7 +368,7 @@ plot(vtotal*[0 1],[0 0],'k:', ...
     scanline(beam),1000*delta_pre(beam),'g.', ...
     scanline(beam),1000*delta_mid(beam),'b.', ...
     scanline(beam),1000*delta_post(beam),'r.');
-axis([0 vtotal 1000*FlipInterval-0.2 1000*FlipInterval+0.2]);
+axis([0 vtotal 1000*FlipInterval-0.5 1000*FlipInterval+0.5]);
 xlabel('Beampos before Flip');
 ylabel('Flip Time Prediction Error (msec)');
 title(sprintf('Flip Time Prediction vs Beam Position ... (Missed Flips), delay = %d', delay));
@@ -343,3 +378,9 @@ filename = sprintf('fig-%d.pdf', delay);
 print(filename, '-dpdf');
 
 end
+
+function ProgressBar(percent, w, ScreenWidth, ScreenHeight)
+    r = SetRect(0.2 * ScreenWidth, 0.02 * ScreenHeight, (0.2 + (percent * 0.75)) * ScreenWidth, 0.08 * ScreenHeight);
+    Screen('FillRect', w, 0, r);
+end
+
