@@ -6,29 +6,43 @@
 function MeasureFlipInterval(finish, skip)
 
 % default parameters
-if nargin < 1, finish = 1, end
-if nargin < 2, skip = 0, end
+if nargin < 1, finish = 1; end
+if nargin < 2, skip = 0; end
 
 % number of samples used to estimate Flip Interval
-N = 200;
-
-Computer = Screen('Computer');
-if strcmp('iMac13,1', Computer.hw.model)    % iMac "Late 2012"
-    ExpectedFlipInterval = 16.685 / 1000;
-else
-    ExpectedFlipInterval = 16.667 / 1000;
-end
-
-try
+N = 500;
 
 % select s = 1 to test external display
 s = 0;
 
+Computer = Screen('Computer');
+if strcmp('iMac13,1', Computer.hw.model)
+    ComputerModel = 'iMac "Late 2012"';
+    ExpectedFlipInterval = 16.6850 / 1000;
+elseif strcmp('iMac14,2', Computer.hw.model)
+    ComputerModel = 'iMac "Late 2013"';
+    ExpectedFlipInterval = 16.6807 / 1000;
+else
+    ComputerModel = 'unknown';
+    ExpectedFlipInterval = 16.6667 / 1000;
+end
+
+%%
+% adjust Psychtoolbox Preferences
+
+PTB = [];
+PTB.Verbosity = Screen('Preference', 'Verbosity', 0);
+PTB.VisualDebugLevel = Screen('Preference', 'VisualDebugLevel', 0);
+PTB.SkipSyncTests = Screen('Preference', 'SkipSyncTests', skip);
+
+try
+
 Priority(9);
 
-Screen('Preference', 'SkipSyncTests', skip);
-
+t0 = GetSecs;
 w = Screen('OpenWindow', s);
+t1 = GetSecs;
+tstartup = t1 - t0;
 
 r = Screen('Rect', s);
 ScreenHeight = RectHeight(r);
@@ -101,16 +115,30 @@ catch e
     CatchGraphicsError(e);
 end
 
+% restore PTB settings
+Screen('Preference', 'Verbosity', PTB.Verbosity);
+Screen('Preference', 'VisualDebugLevel', PTB.VisualDebugLevel);
+Screen('Preference', 'SkipSyncTests', PTB.SkipSyncTests);
+
+
 %%
 % post-processing
 
+% find flip intervals within 10% of expected value
 tlo = 0.9 * ExpectedFlipInterval;
 thi = 1.1 * ExpectedFlipInterval;
 X = (t >= tlo) & (t <= thi);
-[tx ix] = sort(t(X));
+tx = t(X);
+
+% prepare for scatter plot of sequential pairs of flip intervals
+t1 = tx(1:end-1);
+t2 = tx(2:end);
+
+% sort the valid flip intervals
+[tx ix] = sort(tx);
 bx = b(ix);
 
-%%
+%% plots results
 
 if finish
     label = 'DrawingFinished called';
@@ -136,49 +164,71 @@ ylabel('Beam Position After Flip');
 title('Measure Flip Interval');
 legend(label, 'Location', 'NorthWest');
 
+figure(fig + 3);
+plot(t1, t2, 'go');
+xlabel('First Flip Interval');
+ylabel('Second Flip Interval');
+title('Measure Flip Interval');
+legend(label, 'Location', 'NorthWest');
 
-%% print output results
+%% print results
 
-fprintf('Screen Resolution = %d x %d\n', ScreenWidth, ScreenHeight);
-fprintf('vblank = %d\n', vblank);
-fprintf('vtotal = %d\n', vtotal);
-fprintf('finish = %d ... ' , finish);
+fprintf('\n');
+fprintf('MeasureFlipInterval(finish = %d, skip = %d)\n', finish, skip);
+fprintf('\n');
+fprintf('Computer Model = %s, %s\n', Computer.hw.model, ComputerModel);
+fprintf('Screen Resolution = %d x %d, vblank = %d, vtotal = %d\n', ...
+    ScreenWidth, ScreenHeight, vblank, vtotal);
+fprintf('Screen(''DrawingFinished'',...) ');
 if finish
-    fprintf('DrawingFinished called\n');
+    fprintf('called\n');
 else
-    fprintf('no DrawingFinished\n');
+    fprintf('*NOT* called\n');
 end
 
-
-
-fprintf('elapsed time = %10.6f seconds\n', sum(t));
+fprintf('time in PTB startup = %10.6f seconds\n', tstartup);
+fprintf('time in main loop   = %10.6f seconds\n', sum(t));
 fprintf('number of flips = %4d\n', FlipTotal);
 fprintf('    valid flips = %4d\n', nnz(X));
 fprintf('     fast flips = %4d\n', nnz(t < tlo));
 fprintf('     slow flips = %4d\n', nnz(t > thi));
+fprintf('\n');
 fprintf('Statistics for all flips:\n');
-fprintf('median = %10.6f msec\n', 1000 * median(t));
-fprintf('min =    %10.6f msec\n', 1000 * min(t));
-fprintf('max =    %10.6f msec\n', 1000 * max(t));
-fprintf('mean =   %10.6f\n', 1000 * mean(t));
-fprintf('std =    %10.6f\n', 1000 * std(t));
-fprintf('Statistics for valid flips:\n');
-fprintf('median = %10.6f msec\n', 1000 * median(tx));
-fprintf('min =    %10.6f msec\n', 1000 * min(tx));
-fprintf('max =    %10.6f msec\n', 1000 * max(tx));
-fprintf('mean =   %10.6f\n', 1000 * mean(tx));
-fprintf('std =    %10.6f\n', 1000 * std(tx));
+TimingStatistics(t);
+
+% if only a subset of flips were valid, show their statistics
+if nnz(X) ~= FlipTotal
+    fprintf('Statistics for valid flips:\n');
+    TimingStatistics(tx);
+end
+
 if any(t > thi)
-fprintf('List of slow flips ...\n');
-z = (1:FlipTotal)';
-z(t > thi)
+    fprintf('List of slow flips ...\n');
+    z = (1:FlipTotal)';
+    z(t > thi)
 end
 
 
+end
+
+function TimingStatistics(t)
+    tmedian = 1000 * median(t);
+    tmin = 1000 * min(t);
+    tmax = 1000 * max(t);
+    tmean = 1000 * mean(t);
+    tstd = 1000 * std(t);
+    tpercent = 100 * (tstd / tmean);
+    fprintf('median =  %10.6f msec\n', tmedian);
+    fprintf('min =     %10.6f msec\n', tmin);
+    fprintf('max =     %10.6f msec\n', tmax);
+    fprintf('mean =    %10.6f msec\n', tmean);
+    fprintf('std = +/- %10.6f msec\n', tstd);
+    fprintf('      +/- %7.3f percent\n', tpercent);
+    fprintf('\n');
 end
 
 function ProgressBar(percent, w, ScreenWidth, ScreenHeight)
-    r = SetRect(0.2 * ScreenWidth, 0.45 * ScreenHeight, (0.2 + (percent * 0.6)) * ScreenWidth, 0.55 * ScreenHeight);
+    r = SetRect(0.1 * ScreenWidth, 0.45 * ScreenHeight, (0.1 + (percent * 0.8)) * ScreenWidth, 0.55 * ScreenHeight);
     Screen('FillRect', w, 0, r);
 end
 
@@ -200,4 +250,3 @@ function CatchGraphicsError(me, func)
     fprintf('[caught PTB error in "%s"]\n', func);
     rethrow(me);
 end
-
