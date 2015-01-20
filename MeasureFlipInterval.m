@@ -22,10 +22,22 @@ if strcmp('iMac13,1', Computer.hw.model)
 elseif strcmp('iMac14,2', Computer.hw.model)
     ComputerModel = 'iMac "Late 2013"';
     ExpectedFlipInterval = 16.6807 / 1000;
+elseif strcmp('MacBookPro11,3', Computer.hw.model)
+    ComputerModel = 'MacBook Pro (Retina, 15-inch, "Late 2013")';
+    ExpectedFlipInterval = 16.6695 / 1000;
 else
     ComputerModel = 'unknown';
     ExpectedFlipInterval = 16.6667 / 1000;
 end
+
+%% initialize data arrays
+
+
+FlipTotal = N;
+
+t = zeros(FlipTotal,1);
+d = zeros(FlipTotal,1);
+b = zeros(FlipTotal,1);
 
 %%
 % adjust Psychtoolbox Preferences
@@ -38,6 +50,7 @@ PTB.SkipSyncTests = Screen('Preference', 'SkipSyncTests', skip);
 try
 
 Priority(9);
+HideCursor;
 
 t0 = GetSecs;
 w = Screen('OpenWindow', s);
@@ -58,11 +71,6 @@ if vtotal < vblank
 end
 
 %%
-
-FlipTotal = N;
-
-t = zeros(FlipTotal,1);
-b = zeros(FlipTotal,1);
 
 % try to finish any tasks that may steal CPU
 % 1. Matlab garbage collection
@@ -101,10 +109,12 @@ while true
 
     VBL_prev = VBL_timestamp;
     [VBL_timestamp Stim_timestamp Flip_timestamp Missed Beampos_after_Flip ] = Screen('Flip', w, when, 1);
+    Time_after_Flip = GetSecs;
     
     if FlipCount > 0
         t(FlipCount) = VBL_timestamp - VBL_prev;
         b(FlipCount) = Beampos_after_Flip;
+        d(FlipCount) = Time_after_Flip - VBL_timestamp;
     end
     FlipCount = FlipCount + 1;
 end
@@ -193,6 +203,8 @@ fprintf('    valid flips = %4d\n', nnz(X));
 fprintf('     fast flips = %4d\n', nnz(t < tlo));
 fprintf('     slow flips = %4d\n', nnz(t > thi));
 fprintf('\n');
+fprintf('Statistics for delays after Flip (GetSecs - VBL_timestamp)\n');
+TimingStatistics(d);
 fprintf('Statistics for all flips:\n');
 TimingStatistics(t);
 
@@ -245,8 +257,8 @@ function FinishGraphics()
     KbQueueRelease;
 end
 
-function CatchGraphicsError(me, func)
+function CatchGraphicsError(e)
     FinishGraphics;
-    fprintf('[caught PTB error in "%s"]\n', func);
-    rethrow(me);
+    fprintf('[caught PTB error in "%s"]\n');
+    rethrow(e);
 end
