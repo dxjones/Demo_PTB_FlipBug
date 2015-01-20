@@ -1,11 +1,13 @@
 % MeasureFlipInterval.m
 %
+% reliably measure Flip Interval using Psychtoolbox
+%
 % 2015-01-19 dxjones@gmail.com
 %
 
 function MeasureFlipInterval(finish, skip)
 
-% default parameters
+%% default parameters
 if nargin < 1, finish = 1; end
 if nargin < 2, skip = 0; end
 
@@ -39,8 +41,7 @@ t = zeros(FlipTotal,1);
 d = zeros(FlipTotal,1);
 b = zeros(FlipTotal,1);
 
-%%
-% adjust Psychtoolbox Preferences
+%% adjust Psychtoolbox Preferences
 
 PTB = [];
 PTB.Verbosity = Screen('Preference', 'Verbosity', 0);
@@ -70,9 +71,7 @@ if vtotal < vblank
     vtotal = ceil(1.125 * vblank);
 end
 
-%%
-
-% try to finish any tasks that may steal CPU
+%% try to finish any tasks that may steal CPU
 % 1. Matlab garbage collection
 % 2. Matlab event queue
 % 3. relinquish CPU for 500 msec, for OSX to do its thing
@@ -81,13 +80,13 @@ java.lang.System.gc();
 drawnow;
 WaitSecs(0.5);
 
-% since we are not yet synchronized with refresh cycle,
-% the very first flip is often missed, which is expected
-% so let's get this flip outside main loop
+% Initially, we are not synchronized with display refresh cycle.
+% Therefore, the very first flip is often missed, which is normal.
+% Make sure we complete this asynchronous flip outside the main loop.
 
 Screen('Flip', w);
 
-% main loop
+%% main loop
 
 FlipCount = 0;
 VBL_timestamp = 0;
@@ -96,8 +95,8 @@ while true
         break
     end
     
-    p = FlipCount / FlipTotal;
-    ProgressBar(p, w, ScreenWidth, ScreenHeight);
+    % do some very simple graphics
+    ProgressBar(FlipCount / FlipTotal, w, ScreenWidth, ScreenHeight);
     
     if finish
         Screen('DrawingFinished', w, 1);
@@ -131,8 +130,7 @@ Screen('Preference', 'VisualDebugLevel', PTB.VisualDebugLevel);
 Screen('Preference', 'SkipSyncTests', PTB.SkipSyncTests);
 
 
-%%
-% post-processing
+%% post-processing
 
 % find flip intervals within 10% of expected value
 tlo = 0.9 * ExpectedFlipInterval;
@@ -239,8 +237,8 @@ function TimingStatistics(t)
     fprintf('\n');
 end
 
-function ProgressBar(percent, w, ScreenWidth, ScreenHeight)
-    r = SetRect(0.1 * ScreenWidth, 0.45 * ScreenHeight, (0.1 + (percent * 0.8)) * ScreenWidth, 0.55 * ScreenHeight);
+function ProgressBar(fraction, w, ScreenWidth, ScreenHeight)
+    r = SetRect(0.1 * ScreenWidth, 0.45 * ScreenHeight, (0.1 + (fraction * 0.8)) * ScreenWidth, 0.55 * ScreenHeight);
     Screen('FillRect', w, 0, r);
 end
 
@@ -259,6 +257,6 @@ end
 
 function CatchGraphicsError(e)
     FinishGraphics;
-    fprintf('[caught PTB error in "%s"]\n');
+    fprintf('[caught PTB error]\n');
     rethrow(e);
 end
