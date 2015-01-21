@@ -18,14 +18,17 @@ N = 500;
 s = 0;
 
 Computer = Screen('Computer');
-if strcmp('iMac13,1', Computer.hw.model)
-    ComputerModel = 'iMac "Late 2012"';
+if strcmp('iMac11,3', Computer.hw.model)
+    ComputerModel = 'iMac (27-inch, Mid 2010)';
+    ExpectedFlipInterval = 16.6797 / 1000;
+elseif strcmp('iMac13,1', Computer.hw.model)
+    ComputerModel = 'iMac (21.5-inch, Late 2012)';
     ExpectedFlipInterval = 16.6850 / 1000;
 elseif strcmp('iMac14,2', Computer.hw.model)
-    ComputerModel = 'iMac "Late 2013"';
+    ComputerModel = 'iMac (27-inch, Late 2013)';
     ExpectedFlipInterval = 16.6807 / 1000;
 elseif strcmp('MacBookPro11,3', Computer.hw.model)
-    ComputerModel = 'MacBook Pro (Retina, 15-inch, "Late 2013")';
+    ComputerModel = 'MacBook Pro (Retina, 15-inch, Mid 2014)';
     ExpectedFlipInterval = 16.6695 / 1000;
 else
     ComputerModel = 'unknown';
@@ -44,8 +47,8 @@ b = zeros(FlipTotal,1);
 %% adjust Psychtoolbox Preferences
 
 PTB = [];
-PTB.Verbosity = Screen('Preference', 'Verbosity', 0);
-PTB.VisualDebugLevel = Screen('Preference', 'VisualDebugLevel', 0);
+PTB.Verbosity = Screen('Preference', 'Verbosity', 3);
+PTB.VisualDebugLevel = Screen('Preference', 'VisualDebugLevel', 1);
 PTB.SkipSyncTests = Screen('Preference', 'SkipSyncTests', skip);
 
 try
