@@ -1,18 +1,30 @@
 % MeasureFlipInterval.m
 %
-% reliably measure Flip Interval using Psychtoolbox
+% 2015-01-21 dxjones@gmail.com
 %
-% 2015-01-19 dxjones@gmail.com
+% This program reliably measures the "Flip Interval",
+% (time between vertical blanking events in the video refresh cycle)
+%
+% It also measures the delay between the moment the vertical blanking
+% begins (VBL_timestamp) and the moment the Screen('Flip',...) command
+% returns control to the main program.  On some computers, this delay is
+% very brief; on others it is often close to 3 msec, which is very long.
+%
+% This program has been tested using:
+%   Psychtoolbox version 3.0.12 - Flavor: beta - Corresponds to SVN Revision 5797
+% and various iMac computers running Mac OSX 10.9.x and 10.10.x
+%
+% Feedback is welcome:  David Jones, dxjones@gmail.com
 %
 
-function MeasureFlipInterval(finish, skip)
+function MeasureFlipInterval(skip, finish)
 
 %% default parameters
-if nargin < 1, finish = 1; end
-if nargin < 2, skip = 0; end
+if nargin < 1, skip = 0; end
+if nargin < 2, finish = 1; end
 
 % number of samples used to estimate Flip Interval
-N = 500;
+Nsamples = 500;
 
 % select s = 1 to test external display
 s = 0;
@@ -37,12 +49,9 @@ end
 
 %% initialize data arrays
 
-
-FlipTotal = N;
-
-t = zeros(FlipTotal,1);
-d = zeros(FlipTotal,1);
-b = zeros(FlipTotal,1);
+t = zeros(Nsamples,1);
+d = zeros(Nsamples,1);
+b = zeros(Nsamples,1);
 
 %% adjust Psychtoolbox Preferences
 
@@ -94,21 +103,19 @@ Screen('Flip', w);
 FlipCount = 0;
 VBL_timestamp = 0;
 while true
-    if KbCheck || FlipCount > FlipTotal
+    if KbCheck || FlipCount > Nsamples
         break
     end
     
     % do some very simple graphics
-    ProgressBar(FlipCount / FlipTotal, w, ScreenWidth, ScreenHeight);
+    ProgressBar(FlipCount / Nsamples, w, ScreenWidth, ScreenHeight);
     
     if finish
         Screen('DrawingFinished', w, 1);
     end
     
     % Flip
-    
     when = 0;
-
     VBL_prev = VBL_timestamp;
     [VBL_timestamp Stim_timestamp Flip_timestamp Missed Beampos_after_Flip ] = Screen('Flip', w, when, 1);
     Time_after_Flip = GetSecs;
@@ -199,7 +206,7 @@ end
 
 fprintf('time in PTB startup = %10.6f seconds\n', tstartup);
 fprintf('time in main loop   = %10.6f seconds\n', sum(t));
-fprintf('number of flips = %4d\n', FlipTotal);
+fprintf('number of flips = %4d\n', Nsamples);
 fprintf('    valid flips = %4d\n', nnz(X));
 fprintf('     fast flips = %4d\n', nnz(t < tlo));
 fprintf('     slow flips = %4d\n', nnz(t > thi));
@@ -210,14 +217,14 @@ fprintf('Statistics for all flips:\n');
 TimingStatistics(t);
 
 % if only a subset of flips were valid, show their statistics
-if nnz(X) ~= FlipTotal
+if nnz(X) ~= Nsamples
     fprintf('Statistics for valid flips:\n');
     TimingStatistics(tx);
 end
 
 if any(t > thi)
     fprintf('List of slow flips ...\n');
-    z = (1:FlipTotal)';
+    z = (1:Nsamples)';
     z(t > thi)
 end
 
